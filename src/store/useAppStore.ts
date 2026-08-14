@@ -14,7 +14,7 @@ interface AppState {
  publishCourse:(id:string)=>void; addToast:(message:string,tone?:Toast['tone'])=>void; dismissToast:(id:number)=>void;
 }
 export const useAppStore=create<AppState>()(persist((set,get)=>({
- role:'student',isAuthenticated:false,theme:'light',sidebar:true,commandOpen:false,notifications:initialNotifications,
+ role:'student',isAuthenticated:false,theme:'dark',sidebar:true,commandOpen:false,notifications:initialNotifications,
  enrolled:courses.filter(c=>['In progress','Assigned','Completed'].includes(c.status)).map(c=>c.id),completedLessons:[],submittedAssignments:[],publishedCourses:[],toasts:[],
  login:(email,password)=>{const account=demoAccounts.find(a=>a.email===email.trim().toLowerCase()&&a.password===password);if(!account)return null;set({role:account.role,isAuthenticated:true});return account.role},
  logout:()=>set({isAuthenticated:false,commandOpen:false}),toggleTheme:()=>set(s=>({theme:s.theme==='light'?'dark':'light'})),toggleSidebar:()=>set(s=>({sidebar:!s.sidebar})),setCommandOpen:(commandOpen)=>set({commandOpen}),
@@ -24,4 +24,4 @@ export const useAppStore=create<AppState>()(persist((set,get)=>({
  submitAssignment:(id)=>{set(s=>({submittedAssignments:[...new Set([...s.submittedAssignments,id])]}));get().addToast('Assignment submitted successfully','success')},
  publishCourse:(id)=>{set(s=>({publishedCourses:[...new Set([...s.publishedCourses,id])]}));get().addToast('Course published','success')},
  addToast:(message,tone='info')=>{const id=Date.now();set(s=>({toasts:[...s.toasts,{id,message,tone}]}));setTimeout(()=>get().dismissToast(id),3200)},dismissToast:(id)=>set(s=>({toasts:s.toasts.filter(t=>t.id!==id)})),
-}),{name:'pantiss-universe',partialize:(s)=>({role:s.role,isAuthenticated:s.isAuthenticated,theme:s.theme,enrolled:s.enrolled,completedLessons:s.completedLessons,submittedAssignments:s.submittedAssignments,publishedCourses:s.publishedCourses})}));
+}),{name:'pantiss-universe',version:2,migrate:(state,version)=>version<2?{...(state as object),theme:'dark'}:state,partialize:(s)=>({role:s.role,isAuthenticated:s.isAuthenticated,theme:s.theme,enrolled:s.enrolled,completedLessons:s.completedLessons,submittedAssignments:s.submittedAssignments,publishedCourses:s.publishedCourses})}));

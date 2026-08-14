@@ -15,7 +15,7 @@ export function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+  useEffect(() => { document.documentElement.dataset.theme = theme; document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#080b12':'#f5f3fa'); }, [theme]);
   if (isAuthenticated) return <Navigate to={`/${role}`} replace />;
 
   const chooseAccount = (account: DemoAccount) => {
