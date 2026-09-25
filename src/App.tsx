@@ -4,7 +4,7 @@ import { useAppStore } from './store/useAppStore';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { Catalog } from './pages/student/Catalog';
 import { CourseDetails, CoursePlayer } from './pages/student/CourseExperience';
-import { AssignmentDetail, Assignments } from './pages/student/Assignments';
+import { AssignmentDetail, PracticalsRedirect } from './pages/student/Assignments';
 import { Quiz } from './pages/student/Quiz';
 import { Achievements, CalendarPage, Discussions, LearningPaths, Profile, SkillUniverse } from './pages/student/StudentMore';
 import { CourseBuilder, Grading, Students, TeacherAnalytics, TeacherCourses, TeacherDashboard } from './pages/teacher/TeacherPages';
@@ -31,16 +31,16 @@ export default function App() {
     <Route path="/login" element={<Login />} />
     <Route element={<RoleGate role="student" />}>
       <Route path="/student" element={<StudentDashboard />} />
-      <Route path="/student/learning" element={<Catalog learning />} />
-      <Route path="/student/explore" element={<Catalog />} />
+      <Route path="/student/learning" element={<Catalog />} />
+      <Route path="/student/explore" element={<Navigate to="/student/learning" replace />} />
       <Route path="/student/courses/:courseId" element={<CourseDetails />} />
       <Route path="/student/courses/:courseId/learn/:lessonId" element={<CoursePlayer />} />
-      <Route path="/student/assignments" element={<Assignments />} />
+      <Route path="/student/assignments" element={<PracticalsRedirect />} />
       <Route path="/student/assignments/:id" element={<AssignmentDetail />} />
       <Route path="/student/quiz/:id" element={<Quiz />} />
       <Route path="/student/calendar" element={<CalendarPage />} />
       <Route path="/student/skills" element={<SkillUniverse />} />
-      <Route path="/student/paths" element={<LearningPaths />} />
+      <Route path="/student/paths" element={<Navigate to="/student/learning" replace />} />
       <Route path="/student/discussions" element={<Discussions />} />
       <Route path="/student/achievements" element={<Achievements />} />
       <Route path="/student/certificates" element={<Achievements certificates />} />
@@ -61,7 +61,7 @@ export default function App() {
       <Route path="/admin/users" element={<AdminUsers />} />
       <Route path="/admin/courses" element={<AdminCourses />} />
       <Route path="/admin/analytics" element={<AdminAnalytics />} />
-      {(['instructors', 'enrollments', 'groups', 'learning-paths', 'skills', 'content', 'certificates', 'reports', 'announcements', 'audit-log', 'settings'] as const).map(path => <Route key={path} path={`/admin/${path}`} element={<AdminGeneric kind={path === 'learning-paths' ? 'paths' : path === 'audit-log' ? 'audit' : path} />} />)}
+      {(['instructors', 'enrollments', 'groups', 'learning-paths', 'skills', 'content', 'certificates', 'reports', 'announcements', 'audit-log', 'settings'] as const).map(path => <Route key={path} path={`/admin/${path}`} element={path === 'enrollments' ? <AdminUsers /> : <AdminGeneric kind={path === 'learning-paths' ? 'paths' : path === 'audit-log' ? 'audit' : path} />} />)}
     </Route>
     <Route path="*" element={<NotFound />} />
   </Routes>;

@@ -1,13 +1,58 @@
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Award, BookOpen, CalendarClock, CheckCircle2, Clock3, Flame, Play, Sparkles, Target, Zap } from 'lucide-react';
-import { assignments, courses } from '../../data/mock';
-import { Badge, Button, Card, CourseCard, Progress, SectionTitle, StatCard } from '../../components/ui';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, BookOpen, CheckCircle2, ClipboardCheck, Clock3, Lock, Play, Target, Wrench } from 'lucide-react';
+import { courses } from '../../data/mock';
+import { batches, centers, projects } from '../../data/training';
+import { getCourseModules, getDailyAssessments } from '../../data/courseTraining';
+import { useAppStore } from '../../store/useAppStore';
+import { Badge, Button, Card, Progress, SectionTitle, StatCard } from '../../components/ui';
+import { Catalog } from './Catalog';
+import type { Module } from '../../types';
 import hero from '../../assets/industrial-skills-hero.png';
 
-export function StudentDashboard(){const navigate=useNavigate();return <div className="dashboard-page">
- <div className="welcome-line"><div><span className="eyebrow">THURSDAY, AUGUST 13</span><h1>Good evening, Amit <span>👋</span></h1><p>Your workshop practical is scheduled for today at 4:30 PM.</p></div><div className="streak-pill"><Flame/><span><b>12 safe sessions</b><small>Personal best: 18</small></span></div></div>
- <section className="continue-hero"><img src={hero} alt="Industrial skills training workshop"/><div className="hero-shade"/><div className="continue-copy"><Badge tone="glass"><Zap size={12}/> NEXT PRACTICAL</Badge><p>Industrial Electrician</p><h2>Three-Phase Motor Starters</h2><span>Module 2 · Practical 3 · 32 min</span><div className="hero-progress"><Progress value={62}/><b>62%</b></div><Button onClick={()=>navigate('/student/courses/industrial-electrician/learn/state')}><Play size={17} fill="currentColor"/> Continue training</Button></div><div className="hero-orbit"><Sparkles/><span>+40 skill pts</span></div></section>
- <div className="stat-grid student-stats"><StatCard label="Training hours" value="184h" detail="↑ 12h this month" icon={<Clock3/>}/><StatCard label="Practicals complete" value="27" detail="3 this week" icon={<CheckCircle2/>}/><StatCard label="Skill points" value="2,840" detail="82% job-ready" icon={<Zap/>}/><StatCard label="Credentials" value="4" detail="1 earned recently" icon={<Award/>}/></div>
- <div className="content-split"><div><SectionTitle title="My learning" subtitle="Pick up right where you left off" action={<button className="text-button" onClick={()=>navigate('/student/learning')}>View all <ArrowRight/></button>}/><div className="course-row">{courses.filter(c=>c.progress>0&&c.progress<100).slice(0,3).map(c=><CourseCard key={c.id} course={c} onOpen={()=>navigate(`/student/courses/${c.id}`)}/>)}</div></div><Card className="upcoming-panel"><SectionTitle title="Coming up" action={<button className="icon-link" onClick={()=>navigate('/student/calendar')}><CalendarClock/></button>}/><div className="timeline">{assignments.slice(0,3).map((a,i)=><button key={a.id} onClick={()=>navigate(`/student/assignments/${a.id}`)}><time><b>{i===0?'TODAY':i===1?'SAT':'MON'}</b><span>{13+i*3}</span></time><i/><div><Badge tone={i===0?'danger':'neutral'}>{i===0?'Due today':a.course.split(' ')[0]}</Badge><h4>{a.title}</h4><p>{a.due}</p></div></button>)}</div></Card></div>
- <div className="content-split lower"><Card className="skills-card"><SectionTitle title="Trade skills in progress" subtitle="Evidence from theory and workshop assessments" action={<button className="text-button" onClick={()=>navigate('/student/skills')}>View skills passport <ArrowRight/></button>}/>{[['Electrical Safety',92,'Competent'],['Motor Control',72,'Practicing'],['Fault Diagnosis',48,'Developing']].map(([name,val,lvl])=><div className="skill-progress" key={String(name)}><div className="skill-icon">{String(name).slice(0,1)}</div><div><span><b>{name}</b><small>{lvl}</small></span><Progress value={Number(val)} small/></div><strong>{val}%</strong></div>)}</Card><Card className="recommend-card"><div><Badge tone="violet"><Sparkles size={12}/> NEXT course</Badge><h3>HEMM Mechanic</h3><p>Recommended because your electrical and diagnostics foundation transfers well.</p><button onClick={()=>navigate('/student/courses/hemm-mechanic')}>View course <ArrowRight/></button></div><div className="recommend-orb"><Target/></div></Card></div>
- </div>}
+type Track = 'Theory' | 'Practicals';
+function NextModules({ track, modules, completed, courseId }: { track: Track; modules: Module[]; completed: string[]; courseId: string }) {
+ const navigate = useNavigate();
+ const Icon = track === 'Theory' ? BookOpen : Wrench;
+ const sessions = modules.flatMap(module => module.lessons.filter(l => l.track === track && l.type !== 'Quiz').map(lesson => ({ ...lesson, module: module.title })));
+ const done = (lesson: typeof sessions[number]) => lesson.complete || completed.includes(lesson.id);
+ const pending = sessions.filter(lesson => !done(lesson));
+ const next = pending.find(lesson => !lesson.locked) || pending[0];
+ const count = sessions.filter(done).length;
+ return <Card className="dashboard-track"><header><span className="dashboard-track-icon"><Icon /></span><div><small>YOUR NEXT MODULES</small><h2>{track}</h2></div><Badge tone={pending.length ? 'violet' : 'success'}>{count}/{sessions.length} complete</Badge></header>
+ <Progress value={sessions.length ? Math.round(count / sessions.length * 100) : 0} small />
+ {next ? <div className="dashboard-next-session"><span>{next.module}</span><h3>{next.title}</h3><p><Clock3 size={14} />{next.duration}<span>·</span>{next.locked ? 'Awaiting unlock' : 'Ready to start'}</p><Button disabled={next.locked} onClick={() => navigate(`/student/courses/${courseId}/learn/${next.id}`)}>{next.locked ? <Lock size={16} /> : <Play size={16} />}{next.locked ? 'Complete earlier sessions first' : `Continue ${track.toLowerCase()}`}</Button></div> : <div className="dashboard-next-session"><span>{sessions.length ? 'All published sessions completed' : 'Your training plan'}</span><h3>{sessions.length ? `${track} up to date` : `${track} modules coming soon`}</h3><p>{sessions.length ? 'Review your learning while your trainer prepares the next module.' : 'Your trainer will publish your next modules here.'}</p><Button variant="secondary" onClick={() => navigate(`/student/courses/${courseId}?tab=${track}`)}>{sessions.length ? 'Review modules' : 'View training plan'}<ArrowRight size={16} /></Button></div>}
+ {pending.filter(l => l.id !== next?.id).slice(0,2).map(lesson => <div className="dashboard-queued-session" key={lesson.id}>{lesson.locked ? <Lock /> : <Icon />}<div><b>{lesson.title}</b><small>{lesson.module} · {lesson.duration}</small></div><Badge>{lesson.locked ? 'Locked' : 'Up next'}</Badge></div>)}
+ <button className="dashboard-card-link" onClick={() => navigate(`/student/courses/${courseId}?tab=${track}`)}>View all {track.toLowerCase()} modules<ArrowRight size={15} /></button>
+ </Card>;
+}
+
+export function StudentDashboard() {const currentStudentId=useAppStore(s=>s.currentStudentId);
+ const navigate = useNavigate();
+ const { hash } = useLocation();
+ const { training, trainees, completedLessons, submittedAssignments } = useAppStore();
+ const assignment = training[currentStudentId];
+ const course = courses.find(c => c.id === assignment?.courseId);
+ const trainee = trainees.find(t => t.id === currentStudentId);
+ if (hash === '#practicals') return <Navigate to="/student/assignments" replace />;
+ if (!course || !assignment) return <Catalog />;
+ const modules = getCourseModules(course.id);
+ const sessions = modules.flatMap(m => m.lessons).filter(l => l.type !== 'Quiz');
+ const complete = sessions.filter(l => l.complete || completedLessons.includes(l.id));
+ const next = sessions.find(l => !l.complete && !l.locked && !completedLessons.includes(l.id));
+ const assessments = getDailyAssessments(course.id);
+ const due = assessments.filter(a => a.status === 'Due today' && !submittedAssignments.includes(a.id));
+ const graded = assessments.filter(a => a.score !== undefined);
+ const average = graded.length ? Math.round(graded.reduce((sum,a) => sum + a.score!,0) / graded.length) : null;
+ const minutes = complete.reduce((sum,l) => sum + parseInt(l.duration),0);
+ const progress = sessions.length ? Math.round(complete.length / sessions.length * 100) : 0;
+ return <div className="dashboard-page training-dashboard"><div className="welcome-line"><div><span className="eyebrow">YOUR TRAINING WORKSPACE</span><h1>Welcome, {trainee?.name || 'trainee'}</h1><p>{due.length ? `${due.length} daily assessments need your attention. Here’s what’s next in your training.` : 'Keep building your skills, one session at a time.'}</p></div><Badge tone="violet">{course.jobRole}</Badge></div>
+ <section className="continue-hero"><img src={hero} alt="Industrial skills training workshop" /><div className="hero-shade" /><div className="continue-copy"><Badge tone="glass">{course.segment} · YOUR ASSIGNED COURSE</Badge><p>{course.title}</p><h2>{next?.title || 'Your next step starts here'}</h2><span>{next ? `${next.track} · ${next.duration}` : 'View your modules and training plan'}</span><div className="hero-progress"><Progress value={progress} /><b>{progress}%</b></div><small className="dashboard-hero-caption">{complete.length} of {sessions.length} published sessions complete</small><Button onClick={() => navigate(next ? `/student/courses/${course.id}/learn/${next.id}` : `/student/courses/${course.id}`)}><Play size={17} />{next ? 'Continue training' : 'View course'}</Button></div></section>
+ <div className="dashboard-metrics"><StatCard label="Sessions completed" value={`${complete.length}/${sessions.length}`} detail="Across theory and practicals" icon={<CheckCircle2 />} /><StatCard label="Learning time completed" value={`${Math.floor(minutes/60)}h ${minutes%60}m`} detail="Duration of completed sessions" icon={<Clock3 />} /><StatCard label="Assessments due" value={String(due.length)} detail={`${due.filter(a=>a.type==='Theory').length} theory · ${due.filter(a=>a.type==='Practical').length} practical`} icon={<ClipboardCheck />} /><StatCard label="Assessment average" value={average === null ? '—' : `${average}%`} detail={graded.length ? `Across ${graded.length} graded assessments` : 'No graded assessments yet'} icon={<Target />} /></div>
+ <SectionTitle title="Keep your training moving" subtitle="Your next sessions in both learning tracks" />
+ <div className="dashboard-tracks">{(['Theory','Practicals'] as const).map(track => <div key={track} id={track === 'Practicals' ? 'practicals' : undefined} tabIndex={track === 'Practicals' ? -1 : undefined}><NextModules track={track} modules={modules} completed={completedLessons} courseId={course.id} /></div>)}</div>
+ <div className="dashboard-bottom"><Card className="dashboard-assessments"><SectionTitle title="Theory assessments" subtitle="Daily knowledge checks for your assigned course" action={<Button variant="ghost" onClick={() => navigate(`/student/courses/${course.id}?tab=Assessments`)}>View all<ArrowRight size={15} /></Button>} />
+ {assessments.filter(a => a.type === 'Theory' && a.status === 'Due today').map(a => { const submitted = submittedAssignments.includes(a.id); return <button className="dashboard-assessment-row" key={a.id} onClick={() => navigate(a.route || `/student/courses/${course.id}?tab=Assessments`)}><span className="dashboard-track-icon">{a.type === 'Theory' ? <BookOpen /> : <Wrench />}</span><span><b>{a.title}</b><small>Day {a.day} · {a.type} · {a.duration}</small></span><Badge tone={submitted ? 'success' : 'warning'}>{submitted ? 'Submitted' : 'Due today'}</Badge><ArrowRight size={16} /></button>; })}
+ {!assessments.some(a=>a.type==='Theory' && a.status==='Due today') && <p>Your trainer will schedule theory assessments here.</p>}
+ </Card><Card className="dashboard-placement"><SectionTitle title="Your training placement" subtitle="Assigned by your administrator" /><dl>{[['Project',projects.find(p=>p.id===assignment.projectId)?.name],['Center',centers.find(c=>c.id===assignment.centerId)?.name],['Batch',batches.find(b=>b.id===assignment.batchId)?.name],['Lead trainer',course.instructor]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value || 'Not assigned'}</dd></div>)}</dl><button className="dashboard-card-link" onClick={() => navigate('/student/learning')}>View training details<ArrowRight size={15} /></button></Card></div>
+ </div>;
+}

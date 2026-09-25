@@ -24,16 +24,16 @@ export function Login() {
     setError('');
   };
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setError('');
-    window.setTimeout(() => {
-      const matchedRole = login(email, password);
-      setSubmitting(false);
+    try {
+      const matchedRole = await login(email, password);
       if (matchedRole) navigate(`/${matchedRole}`, { replace: true });
-      else setError('Those credentials don’t match a demo account. Choose one below to continue.');
-    }, 350);
+      else setError('The student ID, email, or password is incorrect.');
+    } catch { setError('Unable to sign in. Please try again.'); }
+    finally { setSubmitting(false); }
   };
 
   return <main className="login-page">
@@ -55,10 +55,10 @@ export function Login() {
 
     <section className="login-panel">
       <div className="login-form-wrap">
-        <header><span className="login-mobile-mark"><Sparkles size={19}/></span><div className="eyebrow">WELCOME BACK</div><h2>Sign in to your training workspace</h2><p>Use a trainee, trainer, or institute admin demo account.</p></header>
+        <header><span className="login-mobile-mark"><Sparkles size={19}/></span><div className="eyebrow">WELCOME BACK</div><h2>Sign in to your training workspace</h2><p>Use your student ID or registered email and password.</p></header>
         <form onSubmit={submit} noValidate>
-          <label htmlFor="login-email">Email address</label>
-          <div className="login-input"><span>@</span><input id="login-email" type="email" value={email} onChange={e=>{setEmail(e.target.value);setError('')}} autoComplete="username" placeholder="you@pantiss.com" required/></div>
+          <label htmlFor="login-email">Email or student ID</label>
+          <div className="login-input"><span>@</span><input id="login-email" type="text" value={email} onChange={e=>{setEmail(e.target.value);setError('')}} autoComplete="username" placeholder="you@pantiss.com" required/></div>
           <label htmlFor="login-password">Password</label>
           <div className="login-input"><LockKeyhole size={17}/><input id="login-password" type={showPassword?'text':'password'} value={password} onChange={e=>{setPassword(e.target.value);setError('')}} autoComplete="current-password" placeholder="Enter your password" required/><button type="button" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?'Hide password':'Show password'}>{showPassword?<EyeOff/>:<Eye/>}</button></div>
           {error&&<div className="login-error" role="alert">{error}</div>}
@@ -66,7 +66,7 @@ export function Login() {
         </form>
         <div className="demo-divider"><span>Demo access</span></div>
         <div className="demo-accounts">{demoAccounts.map(account=>{const Icon=roleIcons[account.role];const active=email===account.email;return <button type="button" className={active?'active':''} key={account.role} onClick={()=>chooseAccount(account)} aria-pressed={active}><span className={`demo-icon demo-${account.role}`}><Icon/></span><span><b>{account.role[0].toUpperCase()+account.role.slice(1)}</b><small>{account.email}</small></span><code>{account.password}</code><ArrowRight className="demo-arrow"/></button>})}</div>
-        <p className="login-note"><ShieldCheck size={14}/> Demo only. No personal data is stored or transmitted.</p>
+        <p className="login-note"><ShieldCheck size={14}/> Local prototype. Accounts and training data are saved in this browser.</p>
       </div>
     </section>
   </main>;
